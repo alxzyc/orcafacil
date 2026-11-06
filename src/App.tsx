@@ -5,6 +5,7 @@ import { Button } from './components/Button';
 import { BottomNav } from './components/BottomNav';
 import { ClientesList } from './features/clientes/ClientesList';
 import { Calculadora } from './features/precificacao/Calculadora';
+import { PropostasList } from './features/propostas/PropostasList';
 
 const Home = () => (
   <div className="min-h-screen bg-[#0F0E17] text-white pb-24">
@@ -40,6 +41,12 @@ export default function App() {
         <Route path="/calcular" element={
           <div className="min-h-screen bg-[#0F0E17] text-white">
             <Calculadora />
+            <BottomNav />
+          </div>
+        } />
+        <Route path="/propostas" element={
+          <div className="min-h-screen bg-[#0F0E17] text-white pb-24">
+            <PropostasList />
             <BottomNav />
           </div>
         } />
