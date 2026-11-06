@@ -1,17 +1,7 @@
-// @ts-nocheck
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-
-// AtualizaÃ§Ã£o de deploy limpo (sem node_modules)
-const App = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-100">
-    <div className="bg-white p-8 rounded shadow-lg">
-      <h1 className="text-2xl font-bold text-gray-800">OrÃ§aFÃ¡cil</h1>
-      <p className="text-gray-600 mt-2">Sistema em construÃ§Ã£o.</p>
-    </div>
-  </div>
-);
+import App from './App';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

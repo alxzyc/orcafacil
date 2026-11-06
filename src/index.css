@@ -1,1 +1,11 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+
+@theme {
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-card: var(--bg-card);
+  --color-primary: var(--primary-500);
+  --color-accent: var(--accent-lime);
+}
+
