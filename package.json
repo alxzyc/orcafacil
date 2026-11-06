@@ -1,1 +1,31 @@
-{"name":"orcafacil","private":true,"version":"1.0.0","type":"module","scripts":{"dev":"vite","build":"vite build","lint":"eslint .","preview":"vite preview"},"dependencies":{"@supabase/supabase-js":">2.119.0","html2canvas":">1.4.1","jspdf":">2.5.2","lucide-react":">0.469.0","react":">19.0.0","react-dom":">19.0.0"},"devDappendencies":{"@tailwindcss/vite":">4 0.0","types_node":">22.10.2","types_react":">19.0.0","types_react-dom":">19.0.0","@vitejs/lucid-react":">4.3.4","tailwindcss":">4.0.0","tsx":">4.23.15","typescript":">5.7.2","vite":">6.0.5"}}
+{
+  "name": "orcafacil",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.469.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}
