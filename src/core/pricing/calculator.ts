@@ -24,3 +24,7 @@ export const calculateProposalTotal = (
   const finalTotal = Math.max(0, subtotal - discount);
   return { subtotal, discount, finalTotal };
 };
+
+
+
+

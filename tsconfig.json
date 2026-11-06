@@ -10,7 +10,22 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node", "@testing-library/jest-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@features/*": ["src/features/*"],
+      "@core/*": ["src/core/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@lib/*": ["src/lib/*"],
+      "@types/*": ["src/types/*"],
+      "@styles/*": ["src/styles/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@services/*": ["src/services/*"],
+      "@tests/*": ["src/tests/*"]
+    }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "src/tests/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

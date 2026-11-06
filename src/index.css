@@ -7,5 +7,170 @@
   --color-bg-card: var(--bg-card);
   --color-primary: var(--primary-500);
   --color-accent: var(--accent-lime);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --radius-card: var(--radius-card);
+  --radius-input: var(--radius-input);
+  --radius-pill: var(--radius-pill);
+
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+
+  --animate-in: animate-in 0.3s ease-out;
+  --animate-out: animate-out 0.2s ease-in;
 }
 
+@layer base {
+  * {
+    border-color: var(--glass-border);
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible for accessibility */
+  *:focus-visible {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--accent-lime);
+    ring-opacity: 0.5;
+    ring-offset: 2px;
+    ring-offset-color: var(--bg-base);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@layer utilities {
+  /* Glass morphism utilities */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-card);
+  }
+
+  .glass-elevated {
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-card);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .glass-gradient {
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-card);
+  }
+
+  /* Animation utilities */
+  .animate-in {
+    animation: animate-in 0.3s ease-out;
+  }
+
+  .animate-out {
+    animation: animate-out 0.2s ease-in;
+  }
+
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes animate-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .gradient-accent {
+    background: linear-gradient(to right, var(--accent-lime), #84cc16);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    transition: all 0.2s;
+  }
+  .card-hover:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Input focus states */
+  .input-focus {
+    transition: all 0.2s;
+  }
+  .input-focus:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(184, 242, 92, 0.5);
+    border-color: transparent;
+  }
+}
+
+/* Toast customizations */
+:root {
+  --toast-bg: var(--bg-card);
+  --toast-border: var(--glass-border);
+}

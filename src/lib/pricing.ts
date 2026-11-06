@@ -33,3 +33,7 @@ export function calcularPreco(input: CalcInput) {
     valorHoraEfetivo,
   };
 }
+
+
+
+

@@ -22,6 +22,7 @@ export interface Proposta {
   itens: ProposalItem[];
   desconto: number;
   validade: string;
+  condicoes?: string;
   status: ProposalStatus;
   created_at: string;
   updated_at: string;
@@ -34,3 +35,7 @@ export interface ServiceTemplate {
   valorHora: number;
   materiais: number;
 }
+
+
+
+

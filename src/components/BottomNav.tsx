@@ -1,6 +1,7 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './Button';
+import { Plus } from 'lucide-react';
 
 const tabs = [
   { to: '/', label: 'Início', icon: '🏠' },
@@ -11,9 +12,15 @@ const tabs = [
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleNewProposal = () => {
+    navigate('/propostas/nova');
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#17151F]/90 backdrop-blur-xl border-t border-white/10">
-      <div className="max-w-md mx-auto flex justify-around items-center py-2">
+      <div className="max-w-md mx-auto flex justify-around items-center py-2 relative">
         {tabs.map(t => {
           const active = location.pathname === t.to;
           return (
@@ -23,10 +30,20 @@ export const BottomNav: React.FC = () => {
             </Link>
           );
         })}
-        <div className="absolute -top-6">
-          <Button className="rounded-full w-14 h-14 shadow-lg">+</Button>
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
+          <Button
+            variant="primary"
+            className="rounded-full w-14 h-14 shadow-xl flex items-center justify-center"
+            onClick={handleNewProposal}
+            aria-label="Nova proposta"
+          >
+            <Plus className="w-7 h-7 text-black" />
+          </Button>
         </div>
       </div>
     </div>
   );
 };
+
+
+
