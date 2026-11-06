@@ -7,6 +7,7 @@ import { ClientesList } from './features/clientes/ClientesList';
 import { Calculadora } from './features/precificacao/Calculadora';
 import { PropostasList } from './features/propostas/PropostasList';
 import { ProposalForm } from './features/propostas/ProposalForm';
+import { PublicProposal } from './features/propostas/PublicProposal';
 
 const Home = () => (
   <div className="min-h-screen bg-[#0F0E17] text-white pb-24">
@@ -57,6 +58,7 @@ export default function App() {
             <BottomNav />
           </div>
         } />
+        <Route path="/p/:id" element={<PublicProposal />} />
         <Route path="*" element={<Home />} />
       </Routes>
     </BrowserRouter>
