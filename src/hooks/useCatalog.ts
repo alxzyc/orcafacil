@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { catalogService, type ListResult, type QueryOptions, type ServiceResult } from '../services';
 import type { ServiceTemplate, CreateServiceInput, UpdateServiceInput } from '@/types';
 import { useAuth } from './useAuth';
+import { useDemoAuth } from '../infrastructure/demoAuth';
 
 interface UseCatalogReturn {
   // Data
@@ -29,7 +30,8 @@ interface UseCatalogReturn {
 }
 
 export const useCatalog = (): UseCatalogReturn => {
-  const { profile } = useAuth();
+  const { profile, isAuthenticated } = useAuth();
+  const { signOut: demoSignOut } = useDemoAuth();
   const [items, setItems] = useState<ServiceTemplate[]>([]);
   const [laborItems, setLaborItems] = useState<ServiceTemplate[]>([]);
   const [materialItems, setMaterialItems] = useState<ServiceTemplate[]>([]);
@@ -42,12 +44,26 @@ export const useCatalog = (): UseCatalogReturn => {
   const [lastOptions, setLastOptions] = useState<QueryOptions>({});
 
   const fetchCatalog = useCallback(async (options: QueryOptions = {}) => {
-    if (!profile) return;
-
     setIsLoading(true);
     setError(null);
 
     try {
+      if (!isAuthenticated) {
+        // Demo mode - return empty state
+        setItems([]);
+        setLaborItems([]);
+        setMaterialItems([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        setCurrentPage(1);
+        return;
+      }
+
+      if (!profile) {
+        await fetchCatalog({ page: 1, pageSize: 20 });
+        return;
+      }
+
       let result: ListResult<ServiceTemplate>;
 
       if (lastSearchQuery.trim()) {
@@ -66,6 +82,8 @@ export const useCatalog = (): UseCatalogReturn => {
 
       if (result.success) {
         setItems(result.data || []);
+        setLaborItems((result.data || []).filter((i: any) => i.tipo === 'labor'));
+        setMaterialItems((result.data || []).filter((i: any) => i.tipo === 'material'));
         setTotalCount(result.count);
         setTotalPages(result.totalPages);
         setCurrentPage(result.page);
@@ -77,32 +95,42 @@ export const useCatalog = (): UseCatalogReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile, lastSearchQuery, lastOptions]);
+  }, [profile, isAuthenticated, lastSearchQuery, lastOptions]);
 
   const fetchByType = useCallback(async (type: 'labor' | 'material', options: QueryOptions = {}) => {
+    if (!isAuthenticated) {
+      // Demo mode - return empty state
+      setLaborItems([]);
+      setMaterialItems([]);
+      return;
+    }
+
     if (!profile) return;
 
-    setIsLoading(true);
-    setError(null);
+    let result: ListResult<ServiceTemplate>;
 
-    try {
-      const result = await catalogService.listByTypeForProfile(profile.id, type, options);
-
-      if (result.success) {
-        if (type === 'labor') {
-          setLaborItems(result.data || []);
-        } else {
-          setMaterialItems(result.data || []);
-        }
-      } else {
-        setError(new Error(result.error?.message || `Failed to fetch ${type} items`));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-    } finally {
-      setIsLoading(false);
+    if (lastSearchQuery.trim()) {
+      result = await catalogService.searchForProfile(profile.id, lastSearchQuery, {
+        ...lastOptions,
+        ...options,
+        page: options.page || 1,
+      });
+    } else {
+      result = await catalogService.listForProfile(profile.id, {
+        ...lastOptions,
+        ...options,
+        page: options.page || 1,
+      });
     }
-  }, [profile]);
+
+    if (result.success) {
+      if (type === 'labor') {
+        setLaborItems(result.data || []);
+      } else {
+        setMaterialItems(result.data || []);
+      }
+    }
+  }, [profile, isAuthenticated, lastSearchQuery, lastOptions]);
 
   const searchCatalog = useCallback(async (query: string, options: QueryOptions = {}) => {
     setLastSearchQuery(query);
@@ -111,6 +139,27 @@ export const useCatalog = (): UseCatalogReturn => {
   }, [fetchCatalog]);
 
   const createItem = useCallback(async (item: CreateServiceInput) => {
+    if (!isAuthenticated) {
+      // Demo mode - create in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const newItem: ServiceTemplate = {
+        id: crypto.randomUUID(),
+        profile_id: crypto.randomUUID(),
+        nome: item.nome,
+        tipo: item.tipo,
+        horas: 1,
+        valorHora: item.valorHora || 0,
+        materiais: item.materiais || 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      demoData.items = demoData.items || [];
+      demoData.items.push(newItem);
+      localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+      setItems([...demoData.items]);
+      return { data: newItem, error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await catalogService.createForProfile(profile.id, item);
@@ -118,9 +167,21 @@ export const useCatalog = (): UseCatalogReturn => {
       await fetchCatalog(); // Refresh list
     }
     return result;
-  }, [profile, fetchCatalog]);
+  }, [profile, isAuthenticated]);
 
   const updateItem = useCallback(async (id: string, updates: UpdateServiceInput) => {
+    if (!isAuthenticated) {
+      // Demo mode - update in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const itemIndex = demoData.items?.findIndex((i: any) => i.id === id);
+      if (itemIndex >= 0) {
+        demoData.items[itemIndex] = { ...demoData.items[itemIndex], ...updates, updated_at: new Date().toISOString() };
+        localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+        setItems([...demoData.items]);
+      }
+      return { data: demoData.items[itemIndex], error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await catalogService.updateForProfile(profile.id, id, updates);
@@ -128,9 +189,18 @@ export const useCatalog = (): UseCatalogReturn => {
       await fetchCatalog(); // Refresh list
     }
     return result;
-  }, [profile, fetchCatalog]);
+  }, [profile, isAuthenticated]);
 
   const deleteItem = useCallback(async (id: string) => {
+    if (!isAuthenticated) {
+      // Demo mode - remove from localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      demoData.items = demoData.items?.filter((i: any) => i.id !== id) || [];
+      localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+      setItems([...demoData.items]);
+      return { data: null, error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await catalogService.deleteForProfile(profile.id, id);
@@ -138,7 +208,7 @@ export const useCatalog = (): UseCatalogReturn => {
       await fetchCatalog(); // Refresh list
     }
     return result;
-  }, [profile, fetchCatalog]);
+  }, [profile, isAuthenticated]);
 
   const refresh = useCallback(async () => {
     await fetchCatalog({ page: currentPage });

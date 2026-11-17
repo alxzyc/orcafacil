@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { proposalService, type ListResult, type QueryOptions, type ServiceResult } from '../services';
 import type { Proposta, ProposalStatus, CreateProposalInput, UpdateProposalInput } from '@/types';
 import { useAuth } from './useAuth';
+import { useDemoAuth } from '../infrastructure/demoAuth';
 
 interface UseProposalsReturn {
   // Data
@@ -28,7 +29,8 @@ interface UseProposalsReturn {
 }
 
 export const useProposals = (): UseProposalsReturn => {
-  const { profile } = useAuth();
+  const { profile, isAuthenticated } = useAuth();
+  const { signOut: demoSignOut } = useDemoAuth();
   const [proposals, setProposals] = useState<Proposta[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -39,12 +41,24 @@ export const useProposals = (): UseProposalsReturn => {
   const [lastOptions, setLastOptions] = useState<QueryOptions>({});
 
   const fetchProposals = useCallback(async (options: QueryOptions = {}) => {
-    if (!profile) return;
-
     setIsLoading(true);
     setError(null);
 
     try {
+      if (!isAuthenticated) {
+        // Demo mode - return empty state
+        setProposals([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        setCurrentPage(1);
+        return;
+      }
+
+      if (!profile) {
+        await fetchProposals({ page: 1, pageSize: 20 });
+        return;
+      }
+
       let result: ListResult<Proposta>;
 
       if (lastSearchQuery.trim()) {
@@ -74,7 +88,7 @@ export const useProposals = (): UseProposalsReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile, lastSearchQuery, lastOptions]);
+  }, [profile, isAuthenticated, lastSearchQuery, lastOptions]);
 
   const searchProposals = useCallback(async (query: string, options: QueryOptions = {}) => {
     setLastSearchQuery(query);
@@ -83,6 +97,31 @@ export const useProposals = (): UseProposalsReturn => {
   }, [fetchProposals]);
 
   const createProposal = useCallback(async (proposal: CreateProposalInput) => {
+    if (!isAuthenticated) {
+      // Demo mode - create in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const newProposta: Proposta = {
+        id: crypto.randomUUID(),
+        profile_id: crypto.randomUUID(),
+        clienteId: proposal.clienteId,
+        numero: `ORC-2024-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        itens: proposal.itens || [],
+        desconto: proposal.desconto ?? 0,
+        validade: proposal.validade || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: proposal.status || 'rascunho',
+        public_token: crypto.randomUUID().substring(0, 8),
+        public_token_enabled: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      demoData.proposals = demoData.proposals || [];
+      demoData.proposals.push(newProposta);
+      localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+      setProposals([...demoData.proposas, newProposta]);
+      setTotalCount((demoData.totalCount || 0) + 1);
+      return { data: newProposta, error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.createWithItems(profile.id, proposal);
@@ -90,9 +129,22 @@ export const useProposals = (): UseProposalsReturn => {
       await fetchProposals(); // Refresh list
     }
     return result;
-  }, [profile, fetchProposals]);
+  }, [profile, isAuthenticated]);
 
   const updateProposal = useCallback(async (id: string, updates: UpdateProposalInput) => {
+    if (!isAuthenticated) {
+      // Demo mode - update in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const propostaIndex = demoData.proposals?.findIndex((p: any) => p.id === id);
+      if (propostaIndex >= 0) {
+        const updated = { ...demoData.proposas[propostaIndex], ...updates, updated_at: new Date().toISOString() };
+        demoData.proposals[propostaIndex] = updated;
+        localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+        setProposals([...demoData.proposas]);
+      }
+      return { data: demoData.proposas[propostaIndex], error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.updateWithItems(profile.id, id, updates);
@@ -100,9 +152,19 @@ export const useProposals = (): UseProposalsReturn => {
       await fetchProposals(); // Refresh list
     }
     return result;
-  }, [profile, fetchProposals]);
+  }, [profile, isAuthenticated]);
 
   const deleteProposal = useCallback(async (id: string) => {
+    if (!isAuthenticated) {
+      // Demo mode - remove from localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      demoData.proposals = demoData.proposals?.filter((p: any) => p.id !== id) || [];
+      localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+      setProposals([...demoData.proposas]);
+      setTotalCount(demoData.totalCount != null ? demoData.totalCount - 1 : 0);
+      return { data: null, error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.deleteForProfile(profile.id, id);
@@ -110,9 +172,28 @@ export const useProposals = (): UseProposalsReturn => {
       await fetchProposals(); // Refresh list
     }
     return result;
-  }, [profile, fetchProposals]);
+  }, [profile, isAuthenticated]);
 
   const duplicateProposal = useCallback(async (id: string) => {
+    if (!isAuthenticated) {
+      // Demo mode - duplicate in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const original = demoData.proposas?.find((p: any) => p.id === id);
+      if (original) {
+        const duplicated: CreateProposalInput = {
+          clienteId: original.clienteId,
+          itens: original.itens.map((item: any) => ({ ...item, id: crypto.randomUUID() })),
+          desconto: original.desconto,
+          validade: original.validade,
+          condicoes: original.condicoes,
+          status: 'rascunho' as ProposalStatus,
+        };
+        const result = await createProposal(duplicated);
+        return result;
+      }
+      return { data: null, error: new Error('Proposal not found'), success: false };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.duplicateForProfile(profile.id, id);
@@ -120,9 +201,21 @@ export const useProposals = (): UseProposalsReturn => {
       await fetchProposals(); // Refresh list
     }
     return result;
-  }, [profile, fetchProposals]);
+  }, [profile, isAuthenticated, createProposal]);
 
   const updateStatus = useCallback(async (id: string, status: ProposalStatus) => {
+    if (!isAuthenticated) {
+      // Demo mode - update status in localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      const propostaIndex = demoData.proposals?.findIndex((p: any) => p.id === id);
+      if (propostaIndex >= 0) {
+        demoData.proposas[propostaIndex].status = status;
+        localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+        setProposals([...demoData.proposas]);
+      }
+      return { data: demoData.proposas[propostaIndex], error: null, success: true };
+    }
+
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.updateStatus(profile.id, id, status);
@@ -130,7 +223,7 @@ export const useProposals = (): UseProposalsReturn => {
       await fetchProposals(); // Refresh list
     }
     return result;
-  }, [profile, fetchProposals]);
+  }, [profile, isAuthenticated]);
 
   const refresh = useCallback(async () => {
     await fetchProposals({ page: currentPage });

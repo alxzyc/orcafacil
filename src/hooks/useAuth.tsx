@@ -2,16 +2,37 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase, getCurrentUser, getCurrentSession, isAuthenticated } from '../infrastructure/supabaseClient';
 import { profileService } from '../services';
 import type { User } from '@supabase/supabase-js';
+import { useDemoAuth } from '../infrastructure/demoAuth';
 
-interface Profile {
+// Demo types
+interface DemoUser {
   id: string;
-  company_name: string;
-  created_at: string;
+  email: string;
 }
 
+interface DemoProfile {
+  id: string;
+  company_name: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Common user profile types (union for both real and demo)
+interface CommonUser {
+  id: string;
+  email?: string;
+}
+
+interface CommonProfile {
+  id: string;
+  company_name?: string;
+}
+
+// Auth context type - supports both real Supabase and demo auth
 interface AuthContextType {
-  user: User | null;
-  profile: Profile | null;
+  user: CommonUser | null;
+  profile: CommonProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   signUp: (email: string, password: string, companyName: string) => Promise<{ error: Error | null }>;
@@ -24,169 +45,212 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Check if Supabase is configured
+const hasSupabaseConfig = !!import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project-ref.supabase.co';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  // Use demo auth when Supabase not configured, otherwise real auth
+  const { user: demoUser, profile: demoProfile, isLoading: demoLoading, signUp: demoSignUp, signIn: demoSignIn, signOut: demoSignOut } = useDemoAuth();
+
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [user, setUser] = useState<CommonUser | null>(null);
+  const [profile, setProfile] = useState<CommonProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [useRealAuth, setUseRealAuth] = useState<boolean | null>(null);
 
-  // Initialize auth state
   useEffect(() => {
-    let mounted = true;
+    if (hasSupabaseConfig) {
+      // Initialize real Supabase auth
+      initRealAuth();
+    } else {
+      // Use demo auth
+      setUseRealAuth(false);
+      setUser(demoUser as CommonUser | null);
+      setProfile(demoProfile as CommonProfile | null);
+      setIsLoading(demoLoading);
+      setIsInitialized(true);
+    }
+  }, [hasSupabaseConfig, demoUser, demoProfile, demoLoading]);
 
-    const initializeAuth = async () => {
-      try {
-        const session = await getCurrentSession();
-        if (session?.user) {
-          setUser(session.user);
-          // Fetch profile
-          const profileResult = await profileService.getByUserId(session.user.id);
-          if (profileResult.success && profileResult.data) {
-            setProfile(profileResult.data);
-          }
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err);
-      } finally {
-        if (mounted) setIsLoading(false);
+  const initRealAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Check session first
+      const session = await getCurrentSession();
+      const currentUser = session?.user;
+      
+      if (currentUser) {
+        // Map Supabase user to common type
+        setUser({
+          id: currentUser.id,
+          email: currentUser.email,
+        });
       }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        // Fetch profile on sign in
+      
+      // Fetch profile
+      if (currentUser && profileService) {
+        const profileResult = await profileService.getByUserId(currentUser.id);
+        if (profileResult.success && profileResult.data) {
+          // Map profile to common type
+          setProfile({
+            id: profileResult.data.id,
+            company_name: profileResult.data.company_name,
+          });
+        }
+      }
+      
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const profileResult = await profileService.getByUserId(session.user.id);
-          if (profileResult.success && profileResult.data) {
-            setProfile(profileResult.data);
+          const user = session?.user;
+          if (user) {
+            setUser({
+              id: user.id,
+              email: user.email,
+            });
+            if (profileService) {
+              const profileResult = await profileService.getByUserId(user.id);
+              if (profileResult.success && profileResult.data) {
+                setProfile({
+                  id: profileResult.data.id,
+                  company_name: profileResult.data.company_name,
+                });
+              }
+            }
           }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+        }
+      });
+      
+      setIsInitialized(true);
+      setIsLoading(false);
+      
+      // Cleanup on unmount
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (err) {
+      console.error('Auth initialization error:', err);
+      // Fallback to demo auth if Supabase fails
+      setUseRealAuth(false);
+      setUser(demoUser as CommonUser | null);
+      setProfile(demoProfile as CommonProfile | null);
+      setIsLoading(demoLoading);
+      setIsInitialized(true);
+    }
+  };
+
+  if (!isInitialized) {
+    return <div>Loading...</div>;
+  }
+
+  const value = {
+    user,
+    profile,
+    isLoading,
+    isAuthenticated: !!user,
+    signUp: async (email: string, password: string, companyName: string) => {
+      if (hasSupabaseConfig && profileService) {
+        try {
+          if (!user) return { error: new Error('Not authenticated') };
+          const result = await profileService.createForUser(user.id, companyName);
+          return { error: result.error };
+        } catch (err) {
+          return { error: err instanceof Error ? err : new Error('Sign up failed') };
+        }
+      }
+      return await demoSignUp(email, password, companyName);
+    },
+    signIn: async (email: string, password: string) => {
+      if (hasSupabaseConfig) {
+        try {
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) return { error };
+          // Update user and profile after sign in
+          const session = await getCurrentSession();
+          if (session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+            });
+          }
+          return { error: null };
+        } catch (err) {
+          return { error: err instanceof Error ? err : new Error('Sign in failed') };
+        }
+      }
+      return await demoSignIn(email, password);
+    },
+    signOut: async () => {
+      if (hasSupabaseConfig) {
+        await supabase.auth.signOut();
+      }
+      await demoSignOut();
+    },
+    resetPassword: async (email: string) => {
+      if (hasSupabaseConfig) {
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          return { error };
+        } catch (err) {
+          return { error: err instanceof Error ? err : new Error('Password reset failed') };
+        }
+      }
+      return { error: null };
+    },
+    updateProfile: async (companyName: string) => {
+      if (hasSupabaseConfig && profileService) {
+        if (!user) return { error: new Error('Not authenticated') };
+        try {
+          const result = await profileService.updateCompanyName(user.id, companyName);
+          if (result.success && result.data) {
+            setProfile({
+              id: result.data.id,
+              company_name: result.data.company_name,
+            });
+          }
+          return { error: result.error };
+        } catch (err) {
+          return { error: err instanceof Error ? err : new Error('Failed to update profile') };
+        }
+      }
+// Demo: just update localStorage
+      const demoData = JSON.parse(localStorage.getItem('orcafacil_demo_data') || '{}');
+      if (demoData.profile) {
+        demoData.profile.company_name = companyName;
+        demoData.profile.updated_at = new Date().toISOString();
+        localStorage.setItem('orcafacil_demo_data', JSON.stringify(demoData));
+        setProfile({
+          id: demoData.profile.id,
+          company_name: demoData.profile.company_name,
+        });
+      }
+      return { error: null };
+    },
+    refreshSession: async () => {
+      if (hasSupabaseConfig) {
+        try {
+          const session = await getCurrentSession();
+          if (session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+            });
+          }
+        } catch (err) {
+          // ignore
         }
       } else {
-        setUser(null);
-        setProfile(null);
+        // Demo: no-op
       }
-      setIsLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signUp = async (email: string, password: string, companyName: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            company_name: companyName,
-          },
-        },
-      });
-
-      if (error) {
-        return { error };
-      }
-
-      // Profile will be created by trigger or manually
-      if (data.user) {
-        const profileResult = await profileService.createForUser(data.user.id, companyName);
-        if (!profileResult.success) {
-          console.error('Profile creation failed:', profileResult.error);
-        } else if (profileResult.data) {
-          setProfile(profileResult.data);
-        }
-      }
-
-      return { error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Sign up failed') };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Sign in failed') };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    setIsLoading(true);
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
-    } catch (err) {
-      console.error('Sign out error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      return { error };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Password reset failed') };
-    }
-  };
-
-  const updateProfile = async (companyName: string) => {
-    if (!user) return { error: new Error('Not authenticated') };
-
-    try {
-      const result = await profileService.updateCompanyName(user.id, companyName);
-      if (result.success && result.data) {
-        setProfile(result.data);
-        return { error: null };
-      }
-      return { error: result.error || new Error('Failed to update profile') };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Failed to update profile') };
-    }
-  };
-
-  const refreshSession = async () => {
-    const session = await getCurrentSession();
-    if (session?.user) {
-      setUser(session.user);
-    }
+    },
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        isLoading,
-        isAuthenticated: !!user,
-        signUp,
-        signIn,
-        signOut,
-        resetPassword,
-        updateProfile,
-        refreshSession,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
@@ -199,6 +263,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-
-

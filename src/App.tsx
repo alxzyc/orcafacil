@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { DemoAuthProvider } from './infrastructure/demoAuth';
 import { Toaster } from 'sonner';
 import { GlassCard } from './components/GlassCard';
 import { Button } from './components/Button';
@@ -189,6 +190,7 @@ const AppRoutes = () => {
 export default function App() {
   return (
     <AuthProvider>
+      <DemoAuthProvider />
       <BrowserRouter>
         <Toaster
           position="bottom-right"
@@ -203,6 +205,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-
-

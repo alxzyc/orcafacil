@@ -243,7 +243,7 @@ export interface UpdateClientInput {
 
 export interface CreateProposalInput {
   clienteId: string;
-  itens: Omit<ProposalItem, 'id' | 'proposal_id' | 'created_at'>[];
+  itens: ProposalItem[];
   desconto: number;
   validade: string;
   condicoes?: string;
@@ -252,7 +252,7 @@ export interface CreateProposalInput {
 
 export interface UpdateProposalInput {
   clienteId?: string;
-  itens?: Omit<ProposalItem, 'id' | 'proposal_id' | 'created_at'>[];
+  itens?: ProposalItem[];
   desconto?: number;
   validade?: string;
   condicoes?: string;
