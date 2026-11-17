@@ -3,8 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/Button';
-import { GlassCard } from '../../components/GlassCard';
+import { Button, GlassCard, Input, Label } from '../../components';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -49,6 +48,23 @@ export const Register: React.FC = () => {
   const password = watch('password', '');
   const strengthScore = passwordStrengthChecks.filter((check) => check.test(password)).length;
 
+  const getStrengthColor = (score: number) => {
+    if (score <= 1) return 'bg-[var(--error)]';
+    if (score <= 2) return 'bg-[var(--warning)]';
+    if (score <= 3) return 'bg-[var(--info)]';
+    if (score <= 4) return 'bg-[var(--success)]';
+    return 'bg-[var(--success)]';
+  };
+
+  const getStrengthLabel = (score: number) => {
+    if (score === 0) return 'Muito fraca';
+    if (score === 1) return 'Fraca';
+    if (score === 2) return 'Regular';
+    if (score === 3) return 'Boa';
+    if (score === 4) return 'Forte';
+    return 'Muito forte';
+  };
+
   const onSubmit = async (data: RegisterForm) => {
     setIsSubmitting(true);
     try {
@@ -65,215 +81,145 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <GlassCard className="w-full max-w-md p-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-          OrçaFácil
-        </h1>
-        <p className="mt-2 text-white/60">Crie sua conta grátis</p>
-      </div>
+    <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
+      <GlassCard variant="elevated" className="w-full max-w-md p-8 animate-in animate-scale-in">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-[var(--text-secondary)] bg-clip-text text-transparent">
+            OrçaFácil
+          </h1>
+          <p className="mt-2 text-[var(--text-secondary)]">Crie sua conta grátis</p>
+        </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div>
-          <label htmlFor="companyName" className="block text-sm font-medium text-white/80 mb-2">
-            Nome da empresa
-          </label>
-          <div className="relative">
-            <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <div>
+            <Label htmlFor="companyName">Nome da empresa</Label>
+            <Input
               {...register('companyName')}
               id="companyName"
               type="text"
               autoComplete="organization"
               placeholder="Minha Empresa"
-              className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.companyName ? 'border-red-500' : ''}`}
+              leftIcon={<Building className="w-5 h-5" aria-hidden="true" />}
+              error={errors.companyName?.message}
               disabled={isSubmitting || authLoading}
-              aria-invalid={errors.companyName ? 'true' : 'false'}
-              aria-describedby={errors.companyName ? 'company-error' : undefined}
             />
           </div>
-          {errors.companyName && (
-            <p id="company-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.companyName.message}
-            </p>
-          )}
-        </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">
-            Email
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
               {...register('email')}
               id="email"
               type="email"
               autoComplete="email"
               placeholder="seu@email.com"
-              className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.email ? 'border-red-500' : ''}`}
+              leftIcon={<Mail className="w-5 h-5" aria-hidden="true" />}
+              error={errors.email?.message}
               disabled={isSubmitting || authLoading}
-              aria-invalid={errors.email ? 'true' : 'false'}
-              aria-describedby={errors.email ? 'email-error' : undefined}
             />
           </div>
-          {errors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.email.message}
-            </p>
-          )}
-        </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-white/80 mb-2">
-            Senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
+          <div>
+            <Label htmlFor="password">Senha</Label>
+            <Input
               {...register('password')}
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="••••••••"
-              className={`w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.password ? 'border-red-500' : ''}`}
+              leftIcon={<Lock className="w-5 h-5" aria-hidden="true" />}
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-white transition-colors"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              }
+              error={errors.password?.message}
               disabled={isSubmitting || authLoading}
-              aria-invalid={errors.password ? 'true' : 'false'}
-              aria-describedby={errors.password ? 'password-error' : 'password-strength'}
+              className="pr-12"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
 
-          {/* Password Strength Indicator */}
-          <div id="password-strength" className="mt-3" aria-live="polite">
-            <div className="flex gap-1 mb-2" role="progressbar" aria-valuenow={strengthScore} aria-valuemin={0} aria-valuemax={5} aria-label="Força da senha">
-              {passwordStrengthChecks.map((check, index) => (
-                <div
-                  key={check.label}
-                  className={`flex-1 h-1.5 rounded transition-colors ${
-                    index < strengthScore
-                      ? strengthScore <= 2
-                        ? 'bg-red-500'
-                        : strengthScore <= 3
-                        ? 'bg-yellow-500'
-                        : strengthScore <= 4
-                        ? 'bg-blue-500'
-                        : 'bg-green-500'
-                      : 'bg-white/10'
-                  }`}
-                />
-              ))}
+            <div className="mt-3" role="group" aria-label="Força da senha">
+              <div className="flex gap-1 mb-2" role="progressbar" aria-valuenow={strengthScore} aria-valuemin={0} aria-valuemax={5} aria-label="Força da senha">
+                {passwordStrengthChecks.map((check, index) => (
+                  <div
+                    key={check.label}
+                    className={`flex-1 h-1.5 rounded transition-all duration-300 ${index < strengthScore ? getStrengthColor(strengthScore) : 'bg-[var(--border-default)]'}`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-[var(--text-tertiary)]">Força da senha: <span className="font-medium">{getStrengthLabel(strengthScore)}</span></p>
+              <ul className="mt-2 space-y-1 text-xs text-[var(--text-tertiary)]" aria-label="Requisitos de senha">
+                {passwordStrengthChecks.map((check) => (
+                  <li key={check.label} className="flex items-center gap-2">
+                    {check.test(password) ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-[var(--success)] flex-shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                    )}
+                    <span className={check.test(password) ? 'text-[var(--success-text)]' : ''}>{check.label}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="text-xs text-white/50">
-              Força da senha:{' '}
-              {strengthScore === 0 && 'Muito fraca'}
-              {strengthScore === 1 && 'Fraca'}
-              {strengthScore === 2 && 'Regular'}
-              {strengthScore === 3 && 'Boa'}
-              {strengthScore === 4 && 'Forte'}
-              {strengthScore === 5 && 'Muito forte'}
-            </p>
-            <ul className="mt-2 space-y-1 text-xs text-white/60" aria-label="Requisitos de senha">
-              {passwordStrengthChecks.map((check) => (
-                <li key={check.label} className="flex items-center gap-2">
-                  {check.test(password) ? (
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" aria-hidden="true" />
-                  ) : (
-                    <span className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                  )}
-                  <span className={check.test(password) ? 'text-green-400' : ''}>{check.label}</span>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          {errors.password && (
-            <p id="password-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.password.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/80 mb-2">
-            Confirmar senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
+          <div>
+            <Label htmlFor="confirmPassword">Confirmar senha</Label>
+            <Input
               {...register('confirmPassword')}
               id="confirmPassword"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="••••••••"
-              className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.confirmPassword ? 'border-red-500' : ''}`}
+              leftIcon={<Lock className="w-5 h-5" aria-hidden="true" />}
+              error={errors.confirmPassword?.message}
               disabled={isSubmitting || authLoading}
-              aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-              aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
             />
           </div>
-          {errors.confirmPassword && (
-            <p id="confirm-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.confirmPassword.message}
-            </p>
-          )}
+
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="terms"
+              required
+              className="mt-1 w-4 h-4 rounded border-[var(--border-default)] bg-[var(--bg-input)] text-[var(--accent-lime)] focus:ring-[var(--accent-lime)]"
+              aria-required="true"
+            />
+            <label htmlFor="terms" className="text-sm text-[var(--text-secondary)]">
+              Concordo com os {' '}
+              <a href="#" className="text-[var(--text-link)] hover:underline">Termos de Uso</a>
+              {' '}e {' '}
+              <a href="#" className="text-[var(--text-link)] hover:underline">Política de Privacidade</a>
+            </label>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full py-3 text-lg"
+            disabled={isSubmitting || authLoading}
+            loading={isSubmitting}
+          >
+            Criar conta
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-[var(--text-secondary)]">
+            Já tem conta?{' '}
+            <Link to="/login" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] font-medium transition-colors">
+              Entre
+            </Link>
+          </p>
         </div>
-
-        <div className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            id="terms"
-            required
-            className="mt-1 w-4 h-4 rounded border-white/30 bg-white/5 text-accent-lime focus:ring-accent-lime"
-            aria-required="true"
-          />
-          <label htmlFor="terms" className="text-sm text-white/70">
-            Concordo com os {' '}
-            <a href="#" className="text-accent-lime hover:underline">Termos de Uso</a>
-            {' '}e {' '}
-            <a href="#" className="text-accent-lime hover:underline">Política de Privacidade</a>
-          </label>
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full py-3 text-lg"
-          disabled={isSubmitting || authLoading}
-        >
-          {isSubmitting ? (
-            <>
-              <LoadingSpinner size="sm" color="white" className="mr-2" />
-              Criando conta...
-            </>
-          ) : (
-            'Criar conta'
-          )}
-        </Button>
-      </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-white/60">
-          Já tem conta?{' '}
-          <Link to="/login" className="text-accent-lime hover:text-accent-lime/80 font-medium transition-colors">
-            Entre
-          </Link>
-        </p>
-      </div>
-    </GlassCard>
+      </GlassCard>
+    </div>
   );
 };
 
-
-
+export default Register;

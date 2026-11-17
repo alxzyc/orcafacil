@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { clientService, type ListResult, type QueryOptions, type ServiceResult } from '../services';
-import type { Cliente } from '@/types';
+import type { Cliente, CreateClientInput, UpdateClientInput } from '@/types';
 import { useAuth } from './useAuth';
 
 interface UseClientsReturn {
@@ -14,8 +14,8 @@ interface UseClientsReturn {
   totalCount: number | null;
   // Actions
   fetchClients: (options?: QueryOptions) => Promise<void>;
-  createClient: (client: Omit<Cliente, 'id' | 'created_at'>) => Promise<ServiceResult<Cliente>>;
-  updateClient: (id: string, updates: Partial<Cliente>) => Promise<ServiceResult<Cliente>>;
+  createClient: (client: CreateClientInput) => Promise<ServiceResult<Cliente>>;
+  updateClient: (id: string, updates: UpdateClientInput) => Promise<ServiceResult<Cliente>>;
   deleteClient: (id: string) => Promise<ServiceResult<void>>;
   searchClients: (query: string, options?: QueryOptions) => Promise<void>;
   refresh: () => Promise<void>;
@@ -80,7 +80,7 @@ export const useClients = (): UseClientsReturn => {
     await fetchClients({ ...options, page: 1 });
   }, [fetchClients]);
 
-  const createClient = useCallback(async (client: Omit<Cliente, 'id' | 'created_at'>) => {
+  const createClient = useCallback(async (client: CreateClientInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await clientService.createForProfile(profile.id, client);
@@ -90,7 +90,7 @@ export const useClients = (): UseClientsReturn => {
     return result;
   }, [profile, fetchClients]);
 
-  const updateClient = useCallback(async (id: string, updates: Partial<Cliente>) => {
+  const updateClient = useCallback(async (id: string, updates: UpdateClientInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await clientService.updateForProfile(profile.id, id, updates);
@@ -150,6 +150,3 @@ export const useClients = (): UseClientsReturn => {
     prevPage,
   };
 };
-
-
-

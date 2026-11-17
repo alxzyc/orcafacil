@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { proposalService, type ListResult, type QueryOptions, type ServiceResult } from '../services';
-import type { Proposta, ProposalStatus } from '@/types';
+import type { Proposta, ProposalStatus, CreateProposalInput, UpdateProposalInput } from '@/types';
 import { useAuth } from './useAuth';
 
 interface UseProposalsReturn {
@@ -14,8 +14,8 @@ interface UseProposalsReturn {
   totalCount: number | null;
   // Actions
   fetchProposals: (options?: QueryOptions) => Promise<void>;
-  createProposal: (proposal: Omit<Proposta, 'id' | 'numero' | 'created_at' | 'updated_at'>) => Promise<ServiceResult<Proposta>>;
-  updateProposal: (id: string, updates: Partial<Proposta>) => Promise<ServiceResult<Proposta>>;
+  createProposal: (proposal: CreateProposalInput) => Promise<ServiceResult<Proposta>>;
+  updateProposal: (id: string, updates: UpdateProposalInput) => Promise<ServiceResult<Proposta>>;
   deleteProposal: (id: string) => Promise<ServiceResult<void>>;
   duplicateProposal: (id: string) => Promise<ServiceResult<Proposta>>;
   updateStatus: (id: string, status: ProposalStatus) => Promise<ServiceResult<Proposta>>;
@@ -82,7 +82,7 @@ export const useProposals = (): UseProposalsReturn => {
     await fetchProposals({ ...options, page: 1 });
   }, [fetchProposals]);
 
-  const createProposal = useCallback(async (proposal: Omit<Proposta, 'id' | 'numero' | 'created_at' | 'updated_at'>) => {
+  const createProposal = useCallback(async (proposal: CreateProposalInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.createWithItems(profile.id, proposal);
@@ -92,7 +92,7 @@ export const useProposals = (): UseProposalsReturn => {
     return result;
   }, [profile, fetchProposals]);
 
-  const updateProposal = useCallback(async (id: string, updates: Partial<Proposta>) => {
+  const updateProposal = useCallback(async (id: string, updates: UpdateProposalInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await proposalService.updateWithItems(profile.id, id, updates);
@@ -174,6 +174,3 @@ export const useProposals = (): UseProposalsReturn => {
     prevPage,
   };
 };
-
-
-

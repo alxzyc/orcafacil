@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { catalogService, type ListResult, type QueryOptions, type ServiceResult } from '../services';
-import type { ServiceTemplate } from '@/types';
+import type { ServiceTemplate, CreateServiceInput, UpdateServiceInput } from '@/types';
 import { useAuth } from './useAuth';
 
 interface UseCatalogReturn {
@@ -17,8 +17,8 @@ interface UseCatalogReturn {
   // Actions
   fetchCatalog: (options?: QueryOptions) => Promise<void>;
   fetchByType: (type: 'labor' | 'material', options?: QueryOptions) => Promise<void>;
-  createItem: (item: Omit<ServiceTemplate, 'id'>) => Promise<ServiceResult<ServiceTemplate>>;
-  updateItem: (id: string, updates: Partial<ServiceTemplate>) => Promise<ServiceResult<ServiceTemplate>>;
+  createItem: (item: CreateServiceInput) => Promise<ServiceResult<ServiceTemplate>>;
+  updateItem: (id: string, updates: UpdateServiceInput) => Promise<ServiceResult<ServiceTemplate>>;
   deleteItem: (id: string) => Promise<ServiceResult<void>>;
   searchCatalog: (query: string, options?: QueryOptions) => Promise<void>;
   refresh: () => Promise<void>;
@@ -110,7 +110,7 @@ export const useCatalog = (): UseCatalogReturn => {
     await fetchCatalog({ ...options, page: 1 });
   }, [fetchCatalog]);
 
-  const createItem = useCallback(async (item: Omit<ServiceTemplate, 'id'>) => {
+  const createItem = useCallback(async (item: CreateServiceInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await catalogService.createForProfile(profile.id, item);
@@ -120,7 +120,7 @@ export const useCatalog = (): UseCatalogReturn => {
     return result;
   }, [profile, fetchCatalog]);
 
-  const updateItem = useCallback(async (id: string, updates: Partial<ServiceTemplate>) => {
+  const updateItem = useCallback(async (id: string, updates: UpdateServiceInput) => {
     if (!profile) return { data: null, error: new Error('Not authenticated'), success: false };
 
     const result = await catalogService.updateForProfile(profile.id, id, updates);
@@ -183,6 +183,3 @@ export const useCatalog = (): UseCatalogReturn => {
     prevPage,
   };
 };
-
-
-

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { GlassCard } from '../../components/GlassCard';
-import { Button } from '../../components/Button';
+import { GlassCard, Button, Input, Select, Label, Badge } from '../../components';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { toast } from 'sonner';
 import { Calculator, Save, TrendingUp, DollarSign, Percent, RotateCcw, Copy, Check, AlertCircle } from 'lucide-react';
@@ -32,7 +31,6 @@ export const Calculadora: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'manual' | 'catalog'>('manual');
   const [result, setResult] = useState<ReturnType<typeof calcularPreco> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
 
   const {
     register,
@@ -49,7 +47,6 @@ export const Calculadora: React.FC = () => {
 
   const values = watch();
 
-  // Calculate price in real-time
   React.useEffect(() => {
     const calculated = calcularPreco({
       horas: values.horas || 0,
@@ -62,7 +59,6 @@ export const Calculadora: React.FC = () => {
     setResult(calculated);
   }, [values]);
 
-  // Load catalog items on mount
   React.useEffect(() => {
     fetchByType('labor');
     fetchByType('material');
@@ -75,7 +71,6 @@ export const Calculadora: React.FC = () => {
     if (!isValid) return;
     setIsSaving(true);
     try {
-      // This would save to catalog service
       toast.success('Funcionalidade de salvar como serviço em desenvolvimento');
     } catch (error) {
       toast.error('Erro ao salvar serviço');
@@ -109,27 +104,122 @@ export const Calculadora: React.FC = () => {
 
   if (!result) return null;
 
+  const InputField: React.FC<{
+    label: string;
+    icon: React.ElementType;
+    register: UseFormRegister<Form>;
+    name: keyof Form;
+    type: string;
+    step?: string;
+    min?: string | number;
+    max?: string | number;
+    error?: any;
+  }> = ({ label, icon: Icon, register, name, type, step, min, max, error }) => (
+    <div>
+      <Label htmlFor={name}>
+        <Icon className="w-4 h-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+        {label}
+      </Label>
+      <Input
+        {...register(name)}
+        id={name}
+        type={type}
+        step={step}
+        min={min}
+        max={max}
+        error={error?.message}
+        disabled={false}
+      />
+    </div>
+  );
+
+  const SelectField: React.FC<{
+    label: string;
+    register: UseFormRegister<Form>;
+    name: keyof Form;
+    options: { value: string; label: string; description: string }[];
+    error?: any;
+  }> = ({ label, register, name, options, error }) => (
+    <div>
+      <Label htmlFor={name}>{label}</Label>
+      <Select
+        {...register(name)}
+        id={name}
+        options={options.map(o => ({ value: o.value, label: o.label }))}
+        placeholder="Selecione"
+        error={error?.message}
+      />
+    </div>
+  );
+
+  const ResultItem: React.FC<{
+    label: string;
+    value: string;
+    icon: React.ElementType;
+    highlight?: boolean;
+    positive?: boolean;
+  }> = ({ label, value, icon: Icon, highlight, positive }) => (
+    <div className={`p-4 rounded-xl ${highlight ? 'bg-[var(--accent-lime)]/10 border border-[var(--accent-lime)]/20' : 'bg-[var(--bg-input)]'}`}>
+      <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)] mb-1">
+        <Icon className="w-4 h-4" aria-hidden="true" />
+        <span>{label}</span>
+      </div>
+      <p className={`text-2xl font-bold ${highlight ? 'text-[var(--accent-lime)]' : positive ? 'text-[var(--success-text)]' : 'text-white'}`}>
+        {value}
+      </p>
+    </div>
+  );
+
+  const CatalogItemCard: React.FC<{
+    item: { id: string; nome: string; valorHora?: number; materiais?: number };
+    type: 'labor' | 'material';
+    onApply: (item: { valorHora: number; nome: string } | { materiais: number; nome: string }) => void;
+  }> = ({ item, type, onApply }) => {
+    const value = type === 'labor' ? item.valorHora : item.materiais;
+    const Icon = type === 'labor' ? TrendingUp : DollarSign;
+    const label = type === 'labor' ? 'Valor/hora' : 'Valor';
+
+    return (
+      <button
+        type="button"
+        onClick={() => onApply(type === 'labor' ? { valorHora: value || 0, nome: item.nome } : { materiais: value || 0, nome: item.nome })}
+        className="p-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-xl hover:border-[var(--accent-lime)] hover:bg-[var(--accent-lime)]/5 transition-all text-left group card-interactive"
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-[var(--bg-card)] group-hover:bg-[var(--accent-lime)]/10 transition-colors">
+            <Icon className="w-5 h-5 text-[var(--text-secondary)] group-hover:text-[var(--accent-lime)] transition-colors" aria-hidden="true" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate group-hover:text-[var(--accent-lime)] transition-colors">{item.nome}</p>
+            <p className="text-sm text-[var(--text-tertiary)]">
+              {label}: {formatCurrency(value || 0)}
+            </p>
+          </div>
+          <Check className="w-5 h-5 text-[var(--accent-lime)] opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <div className="p-4 space-y-4 pb-24">
-      {/* Header */}
+    <div className="p-4 space-y-4 pb-28">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Calculator className="w-6 h-6 text-accent-lime" />
+            <Calculator className="w-6 h-6 text-[var(--accent-lime)]" />
             Calculadora de Preço
           </h1>
-          <p className="text-white/60 text-sm mt-1">Calcule o preço ideal para seus serviços</p>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Calcule o preço ideal para seus serviços</p>
         </div>
       </div>
 
-      {/* Tab Selector */}
-      <div className="flex gap-2 bg-white/5 rounded-xl p-1">
+      <div className="flex gap-2 bg-[var(--bg-input)] rounded-xl p-1">
         <button
           onClick={() => setActiveTab('manual')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'manual'
-              ? 'bg-accent-lime text-black'
-              : 'text-white/70 hover:text-white'
+              ? 'bg-[var(--accent-lime)] text-black'
+              : 'text-[var(--text-secondary)] hover:text-white'
           }`}
         >
           Manual
@@ -138,15 +228,14 @@ export const Calculadora: React.FC = () => {
           onClick={() => setActiveTab('catalog')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'catalog'
-              ? 'bg-accent-lime text-black'
-              : 'text-white/70 hover:text-white'
+              ? 'bg-[var(--accent-lime)] text-black'
+              : 'text-[var(--text-secondary)] hover:text-white'
           }`}
         >
           Catálogo
         </button>
       </div>
 
-      {/* Manual Form */}
       {activeTab === 'manual' && (
         <form onSubmit={handleSubmit(handleSaveAsTemplate)} className="space-y-4">
           <GlassCard className="p-6 space-y-5">
@@ -218,15 +307,13 @@ export const Calculadora: React.FC = () => {
             </div>
           </GlassCard>
 
-          {/* Result Card */}
-          <GlassCard className="p-6 space-y-5 bg-gradient-to-br from-white/5 to-white/2 border-accent-lime/20">
+          <GlassCard variant="accent" className="p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-accent-lime" />
+                <TrendingUp className="w-5 h-5 text-[var(--accent-lime)]" />
                 Resultado do Cálculo
               </h2>
-              <Button variant="ghost" size="sm" onClick={handleCopyResult} className="flex items-center gap-1">
-                <Copy className="w-4 h-4" />
+              <Button variant="ghost" size="sm" onClick={handleCopyResult} className="flex items-center gap-1" leftIcon={<Copy className="w-4 h-4" />}>
                 Copiar
               </Button>
             </div>
@@ -256,7 +343,7 @@ export const Calculadora: React.FC = () => {
               />
             </div>
 
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-[var(--border-default)]">
               <ResultItem
                 label="Valor/Hora Efetivo"
                 value={formatCurrency(result.valorHoraEfetivo)}
@@ -265,18 +352,8 @@ export const Calculadora: React.FC = () => {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button variant="primary" type="submit" disabled={!isValid || isSaving} className="flex-1">
-                {isSaving ? (
-                  <>
-                    <LoadingSpinner size="sm" color="white" className="mr-2" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar como Serviço
-                  </>
-                )}
+              <Button variant="primary" type="submit" disabled={!isValid || isSaving} className="flex-1" loading={isSaving} leftIcon={<Save className="w-4 h-4" />}>
+                Salvar como Serviço
               </Button>
               <Button variant="secondary" type="button" onClick={() => reset()} className="flex-1">
                 Limpar
@@ -286,7 +363,6 @@ export const Calculadora: React.FC = () => {
         </form>
       )}
 
-      {/* Catalog Tab */}
       {activeTab === 'catalog' && (
         <div className="space-y-4">
           <GlassCard className="p-6">
@@ -295,7 +371,7 @@ export const Calculadora: React.FC = () => {
               Mão de Obra (Horas)
             </h2>
             {laborItems.length === 0 ? (
-              <div className="text-center py-8 text-white/50">
+              <div className="text-center py-8 text-[var(--text-secondary)]">
                 <p>Nenhum serviço de mão de obra cadastrado</p>
                 <Button variant="secondary" className="mt-2" onClick={() => setActiveTab('manual')}>
                   Calcular manualmente
@@ -321,7 +397,7 @@ export const Calculadora: React.FC = () => {
               Materiais
             </h2>
             {materialItems.length === 0 ? (
-              <div className="text-center py-8 text-white/50">
+              <div className="text-center py-8 text-[var(--text-secondary)]">
                 <p>Nenhum material cadastrado</p>
                 <Button variant="secondary" className="mt-2" onClick={() => setActiveTab('manual')}>
                   Calcular manualmente
@@ -346,141 +422,4 @@ export const Calculadora: React.FC = () => {
   );
 };
 
-// Input Field Component
-interface InputFieldProps {
-  label: string;
-  icon: React.ElementType;
-  register: UseFormRegister<Form>;
-  name: keyof Form;
-  type: string;
-  step?: string;
-  min?: string | number;
-  max?: string | number;
-  error?: any;
-}
-
-const InputField: React.FC<InputFieldProps> = ({
-  label,
-  icon: Icon,
-  register,
-  name,
-  type,
-  step,
-  min,
-  max,
-  error,
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-1">
-      <Icon className="w-4 h-4 text-white/50" aria-hidden="true" />
-      {label}
-    </label>
-    <input
-      {...register(name)}
-      type={type}
-      step={step}
-      min={min}
-      max={max}
-      className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${error ? 'border-red-500' : ''}`}
-      aria-invalid={error ? 'true' : 'false'}
-      aria-describedby={error ? `${name}-error` : undefined}
-    />
-    {error && (
-      <p id={`${name}-error`} className="mt-1 text-sm text-red-400 flex items-center gap-1">
-        <AlertCircle className="w-4 h-4" aria-hidden="true" />
-        {error.message}
-      </p>
-    )}
-  </div>
-);
-
-// Select Field Component
-interface SelectFieldProps {
-  label: string;
-  register: UseFormRegister<Form>;
-  name: keyof Form;
-  options: { value: string; label: string; description: string }[];
-  error?: any;
-}
-
-const SelectField: React.FC<SelectFieldProps> = ({ label, register, name, options, error }) => (
-  <div>
-    <label className="block text-sm font-medium text-white/80 mb-2">{label}</label>
-    <select
-      {...register(name)}
-      className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${error ? 'border-red-500' : ''}`}
-      aria-invalid={error ? 'true' : 'false'}
-      aria-describedby={error ? `${name}-error` : undefined}
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
-      ))}
-    </select>
-    {error && (
-      <p id={`${name}-error`} className="mt-1 text-sm text-red-400 flex items-center gap-1">
-        <AlertCircle className="w-4 h-4" aria-hidden="true" />
-        {error.message}
-      </p>
-    )}
-  </div>
-);
-
-// Result Item Component
-interface ResultItemProps {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  highlight?: boolean;
-  positive?: boolean;
-}
-
-const ResultItem: React.FC<ResultItemProps> = ({ label, value, icon: Icon, highlight, positive }) => (
-  <div className={`p-4 rounded-xl ${highlight ? 'bg-accent-lime/10 border border-accent-lime/20' : 'bg-white/5'}`}>
-    <div className="flex items-center gap-2 text-sm text-white/60 mb-1">
-      <Icon className="w-4 h-4" aria-hidden="true" />
-      <span>{label}</span>
-    </div>
-    <p className={`text-2xl font-bold ${highlight ? 'text-accent-lime' : positive ? 'text-green-400' : 'text-white'}`}>
-      {value}
-    </p>
-  </div>
-);
-
-// Catalog Item Card Component
-interface CatalogItemCardProps {
-  item: { id: string; nome: string; valorHora?: number; materiais?: number };
-  type: 'labor' | 'material';
-  onApply: (item: { valorHora: number; nome: string } | { materiais: number; nome: string }) => void;
-}
-
-const CatalogItemCard: React.FC<CatalogItemCardProps> = ({ item, type, onApply }) => {
-  const value = type === 'labor' ? item.valorHora : item.materiais;
-  const Icon = type === 'labor' ? TrendingUp : DollarSign;
-  const label = type === 'labor' ? 'Valor/hora' : 'Valor';
-
-  return (
-    <button
-      type="button"
-      onClick={() => onApply(type === 'labor' ? { valorHora: value || 0, nome: item.nome } : { materiais: value || 0, nome: item.nome })}
-      className="p-4 bg-white/5 border border-white/10 rounded-xl hover:border-accent-lime/50 hover:bg-accent-lime/5 transition-all text-left group"
-    >
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-white/5 group-hover:bg-accent-lime/10 transition-colors">
-          <Icon className="w-5 h-5 text-white/70 group-hover:text-accent-lime transition-colors" aria-hidden="true" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium truncate group-hover:text-accent-lime transition-colors">{item.nome}</p>
-          <p className="text-sm text-white/50">
-            {label}: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)}
-          </p>
-        </div>
-        <Check className="w-5 h-5 text-accent-lime opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-      </div>
-    </button>
-  );
-};
-
-
-
-
-
+export default Calculadora;

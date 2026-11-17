@@ -1,5 +1,5 @@
 import { BaseService, type ListResult, type QueryOptions, type ServiceResult } from './base';
-import type { Proposta, ProposalItem, ProposalStatus } from '@/types';
+import type { Proposta, ProposalItem, ProposalStatus, CreateProposalInput, UpdateProposalInput } from '@/types';
 
 // Database row types (matching Supabase schema)
 interface BudgetRow {
@@ -56,6 +56,7 @@ interface BudgetItemInsert {
 // Transform database rows to application types
 const toProposta = (budget: BudgetRow, items: BudgetItemRow[]): Proposta => ({
   id: budget.id,
+  profile_id: budget.profile_id,
   numero: `ORC-${new Date(budget.created_at).getFullYear()}-${budget.id.slice(-4).toUpperCase()}`,
   clienteId: budget.client_id || '',
   itens: items.map(item => ({
@@ -71,21 +72,21 @@ const toProposta = (budget: BudgetRow, items: BudgetItemRow[]): Proposta => ({
   updated_at: budget.updated_at,
 });
 
-const toBudgetInsert = (proposta: Omit<Proposta, 'id' | 'numero' | 'created_at' | 'updated_at'>, profileId: string): BudgetInsert => ({
+const toBudgetInsert = (proposta: CreateProposalInput, profileId: string): BudgetInsert => ({
   profile_id: profileId,
   client_id: proposta.clienteId || null,
   title: `Proposta ${proposta.clienteId}`,
   status: proposta.status,
   public_token_enabled: true,
-  total_amount: proposta.itens.reduce((sum: number, item: ProposalItem) => sum + item.quantidade * item.valorUnitario, 0),
+  total_amount: proposta.itens.reduce((sum: number, item: Omit<ProposalItem, 'id' | 'proposal_id' | 'created_at'>) => sum + item.quantidade * item.valorUnitario, 0),
 });
 
-const toBudgetUpdate = (proposta: Partial<Proposta>): BudgetUpdate => {
+const toBudgetUpdate = (proposta: UpdateProposalInput): BudgetUpdate => {
   const update: BudgetUpdate = { updated_at: new Date().toISOString() };
   if (proposta.clienteId !== undefined) update.client_id = proposta.clienteId || null;
   if (proposta.status !== undefined) update.status = proposta.status;
   if (proposta.itens !== undefined) {
-    update.total_amount = proposta.itens.reduce((sum: number, item: ProposalItem) => sum + item.quantidade * item.valorUnitario, 0);
+    update.total_amount = proposta.itens.reduce((sum: number, item: Omit<ProposalItem, 'id' | 'proposal_id' | 'created_at'>) => sum + item.quantidade * item.valorUnitario, 0);
   }
   return update;
 };
@@ -230,7 +231,7 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
   // Create proposal with items
   async createWithItems(
     profileId: string,
-    proposta: Omit<Proposta, 'id' | 'numero' | 'created_at' | 'updated_at'>
+    proposta: CreateProposalInput
   ): Promise<ServiceResult<Proposta>> {
     // Create budget
     const budgetResult = await this.create(toBudgetInsert(proposta, profileId));
@@ -269,7 +270,7 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
   async updateWithItems(
     profileId: string,
     id: string,
-    proposta: Partial<Proposta>
+    proposta: UpdateProposalInput
   ): Promise<ServiceResult<Proposta>> {
     // Update budget
     const { data: budget, error: budgetError } = await this.client
@@ -317,7 +318,7 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
   async updateForProfile(
     profileId: string,
     id: string,
-    updates: Partial<Proposta>
+    updates: UpdateProposalInput
   ): Promise<ServiceResult<Proposta>> {
     const { data: budget, error } = await this.client
       .from(this.tableName)
@@ -345,7 +346,7 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
 
   // Update proposal status
   async updateStatus(profileId: string, id: string, status: ProposalStatus): Promise<ServiceResult<Proposta>> {
-    return this.updateForProfile(profileId, id, { status } as Partial<Proposta>);
+    return this.updateForProfile(profileId, id, { status } as UpdateProposalInput);
   }
 
   // Accept proposal (public)
@@ -421,11 +422,13 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
       return { data: null, error: original.error, success: false };
     }
 
-    const duplicated = {
-      ...original.data,
-      status: 'draft' as ProposalStatus,
+    const duplicated: CreateProposalInput = {
       clienteId: original.data.clienteId,
       itens: original.data.itens.map((item: ProposalItem) => ({ ...item, id: crypto.randomUUID() })),
+      desconto: original.data.desconto,
+      validade: original.data.validade,
+      condicoes: original.data.condicoes,
+      status: 'draft' as ProposalStatus,
     };
 
     return this.createWithItems(profileId, duplicated);
@@ -434,6 +437,3 @@ class ProposalService extends BaseService<BudgetRow, BudgetInsert> {
 
 export const proposalService = new ProposalService();
 export type { BudgetRow, BudgetInsert, BudgetUpdate, BudgetItemRow, BudgetItemInsert };
-
-
-

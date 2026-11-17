@@ -1,5 +1,5 @@
 import { BaseService, type ListResult, type QueryOptions, type ServiceResult } from './base';
-import type { Cliente } from '@/types';
+import type { Cliente, CreateClientInput, UpdateClientInput } from '@/types';
 
 // Database row types (matching Supabase schema)
 interface ClientRow {
@@ -27,20 +27,22 @@ interface ClientUpdate {
 // Transform database row to application type
 const toCliente = (row: ClientRow): Cliente => ({
   id: row.id,
+  profile_id: row.profile_id,
   nome: row.name,
   email: row.email || undefined,
   telefone: row.phone || undefined,
   created_at: row.created_at,
+  updated_at: row.created_at,
 });
 
-const toClientRow = (cliente: Cliente, profileId: string): ClientInsert => ({
+const toClientRow = (cliente: CreateClientInput, profileId: string): ClientInsert => ({
   profile_id: profileId,
   name: cliente.nome,
   email: cliente.email || null,
   phone: cliente.telefone || null,
 });
 
-const toClientUpdate = (cliente: Partial<Cliente>): ClientUpdate => {
+const toClientUpdate = (cliente: UpdateClientInput): ClientUpdate => {
   const update: ClientUpdate = {};
   if (cliente.nome !== undefined) update.name = cliente.nome;
   if (cliente.email !== undefined) update.email = cliente.email || null;
@@ -98,8 +100,8 @@ class ClientService extends BaseService<ClientRow, ClientInsert> {
   }
 
   // Create client for profile
-  async createForProfile(profileId: string, cliente: Omit<Cliente, 'id' | 'created_at'>): Promise<ServiceResult<Cliente>> {
-    const result = await this.create(toClientRow(cliente as Cliente, profileId));
+  async createForProfile(profileId: string, cliente: CreateClientInput): Promise<ServiceResult<Cliente>> {
+    const result = await this.create(toClientRow(cliente, profileId));
 
     return {
       ...result,
@@ -108,7 +110,7 @@ class ClientService extends BaseService<ClientRow, ClientInsert> {
   }
 
   // Update client (scoped to profile)
-  async updateForProfile(profileId: string, id: string, updates: Partial<Cliente>): Promise<ServiceResult<Cliente>> {
+  async updateForProfile(profileId: string, id: string, updates: UpdateClientInput): Promise<ServiceResult<Cliente>> {
     const { data, error } = await this.client
       .from(this.tableName)
       .update(toClientUpdate(updates))
@@ -149,6 +151,3 @@ class ClientService extends BaseService<ClientRow, ClientInsert> {
 
 export const clientService = new ClientService();
 export type { ClientRow, ClientInsert, ClientUpdate };
-
-
-

@@ -1,5 +1,5 @@
 import { BaseService, type ListResult, type QueryOptions, type ServiceResult } from './base';
-import type { ServiceTemplate } from '@/types';
+import type { ServiceTemplate, CreateServiceInput, UpdateServiceInput } from '@/types';
 
 // Database row types
 interface CatalogItemRow {
@@ -33,31 +33,38 @@ interface CatalogItemUpdate {
 // Transform to application type
 const toServiceTemplate = (row: CatalogItemRow): ServiceTemplate => ({
   id: row.id,
+  profile_id: row.profile_id,
   nome: row.name,
+  tipo: row.type,
   horas: row.type === 'labor' ? 1 : 0,
   valorHora: row.type === 'labor' ? row.unit_cost : 0,
   materiais: row.type === 'material' ? row.unit_cost : 0,
+  created_at: row.created_at,
+  updated_at: row.created_at,
 });
 
-const toCatalogInsert = (template: Omit<ServiceTemplate, 'id'>, profileId: string): CatalogItemInsert => {
-  // Determine type based on which fields have values
-  const isLabor = template.horas > 0 && template.valorHora > 0;
-  const isMaterial = template.materiais > 0;
-
+const toCatalogInsert = (template: CreateServiceInput, profileId: string): CatalogItemInsert => {
   return {
     profile_id: profileId,
     name: template.nome,
-    type: isLabor ? 'labor' : 'material',
-    unit: isLabor ? 'hora' : 'unidade',
-    unit_cost: isLabor ? template.valorHora : template.materiais,
+    type: template.tipo,
+    unit: template.tipo === 'labor' ? 'hora' : 'unidade',
+    unit_cost: template.tipo === 'labor' ? template.valorHora : template.materiais,
     default_markup: 0,
   };
 };
 
-const toCatalogUpdate = (template: Partial<ServiceTemplate>): CatalogItemUpdate => {
+const toCatalogUpdate = (template: UpdateServiceInput): CatalogItemUpdate => {
   const update: CatalogItemUpdate = {};
   if (template.nome !== undefined) update.name = template.nome;
-  // Type change would require more complex logic, keep simple for now
+  if (template.tipo !== undefined) update.type = template.tipo;
+  if (template.horas !== undefined || template.valorHora !== undefined || template.materiais !== undefined) {
+    if (template.tipo === 'labor' || (template.tipo === undefined && template.valorHora !== undefined)) {
+      update.unit_cost = template.valorHora ?? 0;
+    } else {
+      update.unit_cost = template.materiais ?? 0;
+    }
+  }
   return update;
 };
 
@@ -130,7 +137,7 @@ class CatalogService extends BaseService<CatalogItemRow, CatalogItemInsert> {
   // Create
   async createForProfile(
     profileId: string,
-    template: Omit<ServiceTemplate, 'id'>
+    template: CreateServiceInput
   ): Promise<ServiceResult<ServiceTemplate>> {
     const result = await this.create(toCatalogInsert(template, profileId));
 
@@ -144,7 +151,7 @@ class CatalogService extends BaseService<CatalogItemRow, CatalogItemInsert> {
   async updateForProfile(
     profileId: string,
     id: string,
-    updates: Partial<ServiceTemplate>
+    updates: UpdateServiceInput
   ): Promise<ServiceResult<ServiceTemplate>> {
     const { data, error } = await this.client
       .from(this.tableName)
@@ -175,6 +182,3 @@ class CatalogService extends BaseService<CatalogItemRow, CatalogItemInsert> {
 
 export const catalogService = new CatalogService();
 export type { CatalogItemRow, CatalogItemInsert, CatalogItemUpdate };
-
-
-

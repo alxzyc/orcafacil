@@ -3,8 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/Button';
-import { GlassCard } from '../../components/GlassCard';
+import { Button, GlassCard, Input, Label } from '../../components';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -47,120 +46,101 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <GlassCard className="w-full max-w-md p-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-          OrçaFácil
-        </h1>
-        <p className="mt-2 text-white/60">Entre na sua conta</p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">
-            Email
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
-              {...register('email')}
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="seu@email.com"
-              className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.email ? 'border-red-500' : ''}`}
-              disabled={isSubmitting || authLoading}
-              aria-invalid={errors.email ? 'true' : 'false'}
-              aria-describedby={errors.email ? 'email-error' : undefined}
-            />
-          </div>
-          {errors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.email.message}
-            </p>
-          )}
+    <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
+      <GlassCard variant="elevated" className="w-full max-w-md p-8 animate-in animate-scale-in">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-[var(--text-secondary)] bg-clip-text text-transparent">
+            OrçaFácil
+          </h1>
+          <p className="mt-2 text-[var(--text-secondary)]">Entre na sua conta</p>
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-white/80 mb-2">
-            Senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-            <input
-              {...register('password')}
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="••••••••"
-              className={`w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.password ? 'border-red-500' : ''}`}
-              disabled={isSubmitting || authLoading}
-              aria-invalid={errors.password ? 'true' : 'false'}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-              aria-pressed={showPassword}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)] pointer-events-none" aria-hidden="true" />
+              <Input
+                {...register('email')}
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="seu@email.com"
+                leftIcon={<Mail className="w-5 h-5" aria-hidden="true" />}
+                error={errors.email?.message}
+                disabled={isSubmitting || authLoading}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="password">Senha</Label>
+            <div className="relative mt-1.5">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)] pointer-events-none" aria-hidden="true" />
+              <Input
+                {...register('password')}
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                leftIcon={<Lock className="w-5 h-5" aria-hidden="true" />}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-white transition-colors"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                }
+                error={errors.password?.message}
+                disabled={isSubmitting || authLoading}
+                className="pl-10 pr-12"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-[var(--border-default)] bg-[var(--bg-input)] text-[var(--accent-lime)] focus:ring-[var(--accent-lime)]"
+                aria-label="Lembrar de mim"
+              />
+              <span className="text-sm text-[var(--text-secondary)]">Lembrar de mim</span>
+            </label>
+            <Link
+              to="/reset-password"
+              className="text-sm text-[var(--text-link)] hover:text-[var(--text-link-hover)] transition-colors"
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
+              Esqueceu a senha?
+            </Link>
           </div>
-          {errors.password && (
-            <p id="password-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              {errors.password.message}
-            </p>
-          )}
-        </div>
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded border-white/30 bg-white/5 text-accent-lime focus:ring-accent-lime"
-              aria-label="Lembrar de mim"
-            />
-            <span className="text-sm text-white/70">Lembrar de mim</span>
-          </label>
-          <Link
-            to="/reset-password"
-            className="text-sm text-accent-lime hover:text-accent-lime/80 transition-colors"
+          <Button
+            type="submit"
+            className="w-full py-3 text-lg"
+            disabled={isSubmitting || authLoading}
+            loading={isSubmitting}
           >
-            Esqueceu a senha?
-          </Link>
+            Entrar
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-[var(--text-secondary)]">
+            Não tem conta?{' '}
+            <Link to="/register" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] font-medium transition-colors">
+              Cadastre-se
+            </Link>
+          </p>
         </div>
-
-        <Button
-          type="submit"
-          className="w-full py-3 text-lg"
-          disabled={isSubmitting || authLoading}
-        >
-          {isSubmitting ? (
-            <>
-              <LoadingSpinner size="sm" color="white" className="mr-2" />
-              Entrando...
-            </>
-          ) : (
-            'Entrar'
-          )}
-        </Button>
-      </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-white/60">
-          Não tem conta?{' '}
-          <Link to="/register" className="text-accent-lime hover:text-accent-lime/80 font-medium transition-colors">
-            Cadastre-se
-          </Link>
-        </p>
-      </div>
-    </GlassCard>
+      </GlassCard>
+    </div>
   );
 };
 
-
-
+export default Login;

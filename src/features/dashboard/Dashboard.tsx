@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useProposals } from '../../hooks/useProposals';
 import { useClients } from '../../hooks/useClients';
-import { GlassCard } from '../../components/GlassCard';
-import { Button } from '../../components/Button';
-import { LoadingSpinner, LoadingOverlay } from '../../components/LoadingSpinner';
+import { GlassCard, Button, Badge, Avatar } from '../../components';
+import { LoadingSpinner, SkeletonCard } from '../../components/LoadingSpinner';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -17,18 +16,12 @@ import {
   AlertCircle,
   Plus,
   ArrowRight,
+  Activity,
+  Target,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { Proposta } from '../../types';
-
-interface DashboardStats {
-  totalClients: number;
-  totalProposals: number;
-  pendingProposals: number;
-  acceptedValue: number;
-  acceptanceRate: number;
-}
+import type { Proposta, DashboardStats } from '../../types';
 
 export const Dashboard: React.FC = () => {
   const { profile, isLoading: authLoading } = useAuth();
@@ -82,30 +75,78 @@ export const Dashboard: React.FC = () => {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'aceita': return { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', label: 'Aceita' };
-      case 'recusada': return { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Recusada' };
-      case 'enviada': return { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Enviada' };
-      case 'rascunho': return { icon: AlertCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'Rascunho' };
-      default: return { icon: AlertCircle, color: 'text-white/60', bg: 'bg-white/10', label: status };
+      case 'aceita': return { icon: CheckCircle, color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-bg)]', label: 'Aceita', variant: 'success' as const };
+      case 'recusada': return { icon: XCircle, color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-bg)]', label: 'Recusada', variant: 'error' as const };
+      case 'enviada': return { icon: Clock, color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-bg)]', label: 'Enviada', variant: 'warning' as const };
+      case 'rascunho': return { icon: AlertCircle, color: 'text-[var(--info-text)]', bg: 'bg-[var(--info-bg)]', label: 'Rascunho', variant: 'info' as const };
+      default: return { icon: AlertCircle, color: 'text-[var(--text-tertiary)]', bg: 'bg-[var(--bg-input)]', label: status, variant: 'neutral' as const };
     }
   };
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0F0E17] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
         <LoadingOverlay message="Carregando dashboard..." />
       </div>
     );
   }
 
+  const StatCard = ({ icon: Icon, value, label, color, bg, trend }: {
+    icon: React.ElementType;
+    value: number | string;
+    label: string;
+    color: string;
+    bg: string;
+    trend?: { value: number; label: string; positive: boolean };
+  }) => (
+    <GlassCard className="p-5 hover-lift">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-[var(--text-secondary)]">{label}</p>
+          <p className="text-3xl font-bold mt-1 tabular-nums">{value}</p>
+          {trend && (
+            <div className="mt-2 flex items-center gap-1">
+              <span className={`text-xs font-medium ${trend.positive ? 'text-[var(--success-text)]' : 'text-[var(--error-text)]'}`}>
+                {trend.positive ? '↑' : '↓'} {trend.value}%
+              </span>
+              <span className="text-xs text-[var(--text-tertiary)]">{trend.label}</span>
+            </div>
+          )}
+        </div>
+        <div className={`p-3 rounded-xl ${bg}`}>
+          <Icon className={`w-6 h-6 ${color}`} aria-hidden="true" />
+        </div>
+      </div>
+    </GlassCard>
+  );
+
+  const QuickActionCard = ({ icon: Icon, title, description, onClick, color, bg }: {
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    onClick: () => void;
+    color: string;
+    bg: string;
+  }) => (
+    <GlassCard variant="interactive" className="p-5 flex items-center gap-4" onClick={onClick}>
+      <div className={`p-3 rounded-xl ${bg}`}>
+        <Icon className={`w-6 h-6 ${color}`} aria-hidden="true" />
+      </div>
+      <div>
+        <p className="font-medium group-hover:text-[var(--accent-lime)] transition-colors">{title}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{description}</p>
+      </div>
+    </GlassCard>
+  );
+
   return (
-    <div className="p-4 space-y-6 pb-24">
+    <div className="p-4 space-y-6 pb-28">
       {/* Welcome Header */}
-      <GlassCard className="p-6">
-        <div className="flex items-center justify-between">
+      <GlassCard variant="accent" className="p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Olá, {profile?.company_name || 'Usuário'}</h1>
-            <p className="text-white/60 mt-1">
+            <p className="text-[var(--text-secondary)] mt-1">
               Acompanhe suas propostas e clientes em um só lugar
             </p>
           </div>
@@ -113,15 +154,15 @@ export const Dashboard: React.FC = () => {
             variant="primary"
             onClick={() => navigate('/propostas/nova')}
             className="flex items-center gap-2"
+            leftIcon={<Plus className="w-5 h-5" />}
           >
-            <Plus className="w-5 h-5" />
             Nova Proposta
           </Button>
         </div>
       </GlassCard>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Users}
           value={stats.totalClients}
@@ -152,27 +193,65 @@ export const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Acceptance Rate */}
-      <GlassCard className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Taxa de Aceitação</h2>
-          <span className="text-2xl font-bold text-green-400">{stats.acceptanceRate}%</span>
-        </div>
-        <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
-          <div
-            className="bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full transition-all duration-500"
-            style={{ width: `${stats.acceptanceRate}%` }}
-          />
-        </div>
-        <p className="mt-2 text-sm text-white/60">
-          {stats.totalProposals} propostas enviadas
-        </p>
-      </GlassCard>
+      {/* Acceptance Rate & Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Taxa de Aceitação</h2>
+            <span className="text-2xl font-bold text-[var(--success-text)]">{stats.acceptanceRate}%</span>
+          </div>
+          <div className="w-full bg-[var(--bg-input)] rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-[var(--success)] to-emerald-400 h-full rounded-full transition-all duration-1000"
+              style={{ width: `${stats.acceptanceRate}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            {stats.totalProposals} propostas enviadas
+          </p>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Atividade Recente</h2>
+            <Badge variant="accent" dot>Ativo</Badge>
+          </div>
+          <div className="space-y-3">
+            {recentProposals.slice(0, 3).map((proposal) => {
+              const { icon: StatusIcon, variant, label } = getStatusConfig(proposal.status);
+              return (
+                <div key={proposal.id} className="flex items-center justify-between p-3 bg-[var(--bg-input)] rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[var(--bg-card)]">
+                      <FileText className="w-5 h-5 text-[var(--text-secondary)]" />
+                    </div>
+                    <div>
+                      <p className="font-medium truncate max-w-[200px]">{proposal.numero}</p>
+                      <p className="text-xs text-[var(--text-tertiary)]">
+                        {format(new Date(proposal.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={variant} icon={<StatusIcon className="w-3 h-3" />}>
+                    {label}
+                  </Badge>
+                </div>
+              );
+            })}
+            {recentProposals.length === 0 && (
+              <div className="text-center py-6 text-[var(--text-tertiary)]">
+                <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma atividade recente</p>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      </div>
 
       {/* Recent Proposals */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Propostas Recentes</h2>
-        <Link to="/propostas" className="text-sm text-accent-lime hover:text-accent-lime/80 flex items-center gap-1">
+        <Link to="/propostas" className="text-sm text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-1">
           Ver todas <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
@@ -180,58 +259,52 @@ export const Dashboard: React.FC = () => {
       {isLoading ? (
         <div className="space-y-3" aria-busy="true">
           {[1, 2, 3].map((i) => (
-            <GlassCard key={i} className="p-4 animate-pulse">
-              <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-white/5 rounded w-1/2" />
-            </GlassCard>
+            <SkeletonCard key={i} />
           ))}
         </div>
       ) : recentProposals.length === 0 ? (
-        <GlassCard className="p-8 text-center">
-          <FileText className="w-16 h-16 mx-auto text-white/20 mb-4" />
+        <GlassCard className="p-10 text-center">
+          <FileText className="w-16 h-16 mx-auto text-[var(--text-tertiary)] mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhuma proposta ainda</h3>
-          <p className="text-white/60 mb-4">Crie sua primeira proposta para começar</p>
+          <p className="text-[var(--text-secondary)] mb-6">Crie sua primeira proposta para começar</p>
           <Button
             variant="primary"
             onClick={() => navigate('/propostas/nova')}
             className="flex items-center gap-2 mx-auto"
+            leftIcon={<Plus className="w-5 h-5" />}
           >
-            <Plus className="w-5 h-5" />
             Criar Proposta
           </Button>
         </GlassCard>
       ) : (
         <div className="space-y-3" role="list" aria-label="Propostas recentes">
           {recentProposals.map((proposal) => {
-            const { icon: StatusIcon, color, bg, label } = getStatusConfig(proposal.status);
+            const { icon: StatusIcon, variant, label } = getStatusConfig(proposal.status);
             const total = proposal.itens.reduce((sum, item) => sum + item.quantidade * item.valorUnitario, 0);
 
             return (
-              <GlassCard key={proposal.id} className="p-4 flex items-center justify-between group">
-                <Link to={`/propostas/${proposal.id}`} className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-white/5">
-                      <FileText className="w-5 h-5 text-white/70" />
-                    </div>
-                    <div className="min-w-0">
+              <GlassCard key={proposal.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 group card-interactive">
+                <Link to={`/propostas/${proposal.id}`} className="flex-1 min-w-0 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[var(--bg-input)]">
+                    <FileText className="w-5 h-5 text-[var(--text-secondary)]" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium truncate">{proposal.numero}</p>
-                      <p className="text-sm text-white/60 truncate">
-                        {format(new Date(proposal.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                      </p>
+                      <Badge variant={variant} icon={<StatusIcon className="w-3 h-3" />}>
+                        {label}
+                      </Badge>
                     </div>
+                    <p className="text-sm text-[var(--text-secondary)] truncate mt-1">
+                      {format(new Date(proposal.created_at), 'dd/MM/yyyy', { locale: ptBR })} • {proposal.itens.length} item{proposal.itens.length !== 1 ? 's' : ''}
+                    </p>
                   </div>
                 </Link>
-                <div className="flex items-center gap-4 ml-4">
+                <div className="flex items-center gap-4 sm:ml-4">
                   <div className="text-right hidden sm:block">
                     <p className="font-medium">{formatCurrency(total)}</p>
-                    <p className="text-xs text-white/50">Total</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">Total</p>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${color} ${bg}`}
-                  >
-                    <StatusIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                    {label}
-                  </span>
                 </div>
               </GlassCard>
             );
@@ -266,7 +339,7 @@ export const Dashboard: React.FC = () => {
           bg="bg-green-500/10"
         />
         <QuickActionCard
-          icon={TrendingUp}
+          icon={Target}
           title="Catálogo"
           description="Serviços e materiais"
           onClick={() => navigate('/catalogo')}
@@ -278,59 +351,12 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-// Stat Card Component
-interface StatCardProps {
-  icon: React.ElementType;
-  value: number | string;
-  label: string;
-  color: string;
-  bg: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ icon: Icon, value, label, color, bg }) => (
-  <GlassCard className="p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-white/60">{label}</p>
-        <p className="text-2xl font-bold mt-1">{value}</p>
-      </div>
-      <div className={`p-3 rounded-xl ${bg}`}>
-        <Icon className={`w-6 h-6 ${color}`} aria-hidden="true" />
-      </div>
-    </div>
-  </GlassCard>
+// Loading overlay for auth loading
+const LoadingOverlay: React.FC<{ message?: string }> = ({ message = 'Carregando...' }) => (
+  <div className="fixed inset-0 bg-[var(--bg-overlay)] backdrop-blur-sm flex flex-col items-center justify-center z-[var(--z-modal)]">
+    <LoadingSpinner size="lg" color="accent" />
+    <p className="mt-4 text-[var(--text-secondary)]">{message}</p>
+  </div>
 );
 
-// Quick Action Card Component
-interface QuickActionCardProps {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  onClick: () => void;
-  color: string;
-  bg: string;
-}
-
-const QuickActionCard: React.FC<QuickActionCardProps> = ({
-  icon: Icon,
-  title,
-  description,
-  onClick,
-  color,
-  bg,
-}) => (
-  <GlassCard className="p-4 flex items-center gap-4 group cursor-pointer transition-all hover:bg-white/10" onClick={onClick}>
-    <div className={`p-3 rounded-xl ${bg}`}>
-      <Icon className={`w-6 h-6 ${color}`} aria-hidden="true" />
-    </div>
-    <div>
-      <p className="font-medium group-hover:text-accent-lime transition-colors">{title}</p>
-      <p className="text-sm text-white/60">{description}</p>
-    </div>
-  </GlassCard>
-);
-
-
-
-
-
+export default Dashboard;

@@ -3,12 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useClients } from '../../hooks/useClients';
-import { GlassCard } from '../../components/GlassCard';
-import { Button } from '../../components/Button';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { GlassCard, Button, Input, Label, Badge, Modal, Avatar } from '../../components';
+import { LoadingSpinner, SkeletonCard } from '../../components/LoadingSpinner';
 import { toast } from 'sonner';
-import { Search, Plus, Edit, Trash2, User, Mail, Phone, X, Check, Loader2, ChevronLeft, ChevronRight, AlertCircle, Clock } from 'lucide-react';
-import type { Cliente } from '../../types';
+import { Search, Plus, Edit, Trash2, User, Mail, Phone, X, Check, Loader2, ChevronLeft, ChevronRight, AlertCircle, Clock, UserPlus } from 'lucide-react';
+import type { Cliente, ClientFormData } from '../../types';
 
 const clientSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -54,7 +53,6 @@ export const ClientesList: React.FC = () => {
     mode: 'onChange',
   });
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -139,33 +137,60 @@ export const ClientesList: React.FC = () => {
   };
 
   const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('pt-BR');
+    new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const confirmDelete = (id: string, nome: string) => (
+    <Modal
+      isOpen={deletingId === id}
+      onClose={() => setDeletingId(null)}
+      title="Excluir cliente"
+      description={`Tem certeza que deseja excluir "${nome}"? Esta ação não pode ser desfeita.`}
+      size="sm"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setDeletingId(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={() => handleDelete(id)} loading={deletingId === id}>
+            Excluir
+          </Button>
+        </div>
+      }
+    >
+      <div />
+    </Modal>
+  );
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header with Search and Create Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" aria-hidden="true" />
-          <input
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <User className="w-6 h-6 text-[var(--accent-lime)]" />
+            Clientes
+          </h1>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Gerencie seus clientes</p>
+        </div>
+        <Button variant="primary" onClick={openCreateModal} className="flex items-center gap-2 whitespace-nowrap" leftIcon={<UserPlus className="w-5 h-5" />}>
+          Novo Cliente
+        </Button>
+      </div>
+
+      <GlassCard className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <Input
             type="text"
             placeholder="Buscar clientes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all"
+            className="pl-10"
             aria-label="Buscar clientes"
           />
         </div>
-        <Button variant="primary" onClick={openCreateModal} className="flex items-center gap-2 whitespace-nowrap">
-          <Plus className="w-5 h-5" />
-          <span>Novo Cliente</span>
-        </Button>
-      </div>
+      </GlassCard>
 
-      {/* Error State */}
       {error && (
-        <GlassCard className="p-4 border-red-500/20">
-          <div className="flex items-center gap-3 text-red-400">
+        <GlassCard variant="bordered" className="p-4 border-[var(--error-border)]">
+          <div className="flex items-center gap-3 text-[var(--error-text)]">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p>Erro ao carregar clientes: {error.message}</p>
             <Button variant="ghost" size="sm" onClick={() => fetchClients({ page: 1 })}>
@@ -175,50 +200,40 @@ export const ClientesList: React.FC = () => {
         </GlassCard>
       )}
 
-      {/* Client List */}
       <div className="space-y-3" role="list" aria-label="Lista de clientes">
         {isLoading && clients.length === 0 ? (
-          // Initial loading skeletons
           <div className="space-y-3" aria-busy="true">
             {[1, 2, 3].map((i) => (
-              <GlassCard key={i} className="p-4 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-white/10" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-white/10 rounded w-1/4" />
-                    <div className="h-3 bg-white/5 rounded w-1/3" />
-                  </div>
-                </div>
-              </GlassCard>
+              <SkeletonCard key={i} />
             ))}
           </div>
         ) : clients.length === 0 ? (
-          // Empty state
-          <GlassCard className="p-8 text-center">
-            <User className="w-16 h-16 mx-auto text-white/20 mb-4" />
+          <GlassCard className="p-10 text-center">
+            <User className="w-16 h-16 mx-auto text-[var(--text-tertiary)] mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
-            <p className="text-white/60 mb-4">
+            <p className="text-[var(--text-secondary)] mb-4">
               {debouncedQuery ? 'Tente ajustar sua busca' : 'Comece adicionando seu primeiro cliente'}
             </p>
-            <Button variant="primary" onClick={openCreateModal} className="flex items-center gap-2 mx-auto">
-              <Plus className="w-5 h-5" />
+            <Button variant="primary" onClick={openCreateModal} className="flex items-center gap-2 mx-auto" leftIcon={<Plus className="w-5 h-5" />}>
               Adicionar Cliente
             </Button>
           </GlassCard>
         ) : (
-          // Client list
           clients.map((client) => (
             <GlassCard
               key={client.id}
-              className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 group"
+              variant="interactive"
+              className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  <User className="w-6 h-6 text-white" aria-hidden="true" />
-                </div>
+                <Avatar
+                  fallback={client.nome}
+                  alt={client.nome}
+                  size="lg"
+                />
                 <div className="min-w-0">
                   <p className="font-medium truncate">{client.nome}</p>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-white/60 mt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)] mt-1">
                     {client.email && (
                       <span className="flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5" aria-hidden="true" />
@@ -246,13 +261,13 @@ export const ClientesList: React.FC = () => {
                   onClick={() => openEditModal(client)}
                   aria-label={`Editar ${client.nome}`}
                   disabled={isSubmitting}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
+                  leftIcon={<Edit className="w-4 h-4" />}
+                />
+                {confirmDelete(client.id, client.nome)}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(client.id)}
+                  onClick={() => setDeletingId(client.id)}
                   aria-label={`Excluir ${client.nome}`}
                   disabled={deletingId === client.id || isSubmitting}
                 >
@@ -268,155 +283,101 @@ export const ClientesList: React.FC = () => {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2" role="navigation" aria-label="Paginação">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={prevPage}
-            disabled={currentPage <= 1 || isLoading}
-            aria-label="Página anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="px-4 text-white/70">
+<Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={prevPage}
+                  disabled={currentPage <= 1 || isLoading}
+                  aria-label="Página anterior"
+                  leftIcon={<ChevronLeft className="w-4 h-4" />}
+                />
+          <span className="px-4 text-[var(--text-secondary)]">
             Página {currentPage} de {totalPages}
           </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={nextPage}
-            disabled={currentPage >= totalPages || isLoading}
-            aria-label="Próxima página"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+<Button
+              variant="secondary"
+              size="sm"
+              onClick={nextPage}
+              disabled={currentPage >= totalPages || isLoading}
+              aria-label="Próxima página"
+              rightIcon={<ChevronRight className="w-4 h-4" />}
+            >
+              Próxima
+            </Button>
         </div>
       )}
 
-      {/* Total count */}
       {totalCount !== null && totalCount > 0 && (
-        <p className="text-center text-sm text-white/50">
+        <p className="text-center text-sm text-[var(--text-tertiary)]">
           {totalCount} cliente{totalCount !== 1 ? 's' : ''} no total
         </p>
       )}
 
-      {/* Create/Edit Modal */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <GlassCard className="w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 id="modal-title" className="text-xl font-semibold">
-                {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-white/50 hover:text-white transition-colors p-1"
-                aria-label="Fechar"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={closeModal} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {}}
+              form="client-form"
+              type="submit"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+            >
+              {editingClient ? 'Atualizar' : 'Criar'}
+            </Button>
+          </div>
+        }
+      >
+        <form id="client-form" onSubmit={handleSubmit(editingClient ? handleUpdateSubmit : handleCreateSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="nome" required>Nome</Label>
+            <Input
+              {...register('nome')}
+              id="nome"
+              type="text"
+              placeholder="Nome completo"
+              error={errors.nome?.message}
+              disabled={isSubmitting}
+            />
+          </div>
 
-            <form onSubmit={handleSubmit(editingClient ? handleUpdateSubmit : handleCreateSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="nome" className="block text-sm font-medium text-white/80 mb-2">
-                  Nome <span className="text-red-400">*</span>
-                </label>
-                <input
-                  {...register('nome')}
-                  id="nome"
-                  type="text"
-                  placeholder="Nome completo"
-                  className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.nome ? 'border-red-500' : ''}`}
-                  disabled={isSubmitting}
-                  aria-invalid={errors.nome ? 'true' : 'false'}
-                  aria-describedby={errors.nome ? 'nome-error' : undefined}
-                />
-                {errors.nome && (
-                  <p id="nome-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" aria-hidden="true" />
-                    {errors.nome.message}
-                  </p>
-                )}
-              </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              {...register('email')}
+              id="email"
+              type="email"
+              placeholder="cliente@email.com"
+              error={errors.email?.message}
+              disabled={isSubmitting}
+            />
+          </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">
-                  Email
-                </label>
-                <input
-                  {...register('email')}
-                  id="email"
-                  type="email"
-                  placeholder="cliente@email.com"
-                  className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.email ? 'border-red-500' : ''}`}
-                  disabled={isSubmitting}
-                  aria-invalid={errors.email ? 'true' : 'false'}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
-                />
-                {errors.email && (
-                  <p id="email-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" aria-hidden="true" />
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="telefone" className="block text-sm font-medium text-white/80 mb-2">
-                  Telefone
-                </label>
-                <input
-                  {...register('telefone')}
-                  id="telefone"
-                  type="tel"
-                  placeholder="(11) 99999-9999"
-                  className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-accent-lime/50 focus:border-transparent transition-all ${errors.telefone ? 'border-red-500' : ''}`}
-                  disabled={isSubmitting}
-                  aria-invalid={errors.telefone ? 'true' : 'false'}
-                  aria-describedby={errors.telefone ? 'telefone-error' : undefined}
-                />
-                {errors.telefone && (
-                  <p id="telefone-error" className="mt-1 text-sm text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" aria-hidden="true" />
-                    {errors.telefone.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button variant="secondary" type="button" onClick={closeModal} className="flex-1" disabled={isSubmitting}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <LoadingSpinner size="sm" color="white" className="mr-2" />
-                      Salvando...
-                    </>
-                  ) : editingClient ? (
-                    'Atualizar'
-                  ) : (
-                    'Criar'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </GlassCard>
-        </div>
-      )}
+          <div>
+            <Label htmlFor="telefone">Telefone</Label>
+            <Input
+              {...register('telefone')}
+              id="telefone"
+              type="tel"
+              placeholder="(11) 99999-9999"
+              error={errors.telefone?.message}
+              disabled={isSubmitting}
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
 
-
-
-
-
+export default ClientesList;

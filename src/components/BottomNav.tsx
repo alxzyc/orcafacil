@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './Button';
-import { Plus } from 'lucide-react';
+import { Plus, Home, Users, FileText, Calculator } from 'lucide-react';
 
 const tabs = [
-  { to: '/', label: 'Início', icon: '🏠' },
-  { to: '/clientes', label: 'Clientes', icon: '👥' },
-  { to: '/propostas', label: 'Propostas', icon: '📄' },
-  { to: '/calcular', label: 'Preço', icon: '🧮' },
+  { to: '/', label: 'Início', icon: Home },
+  { to: '/clientes', label: 'Clientes', icon: Users },
+  { to: '/propostas', label: 'Propostas', icon: FileText },
+  { to: '/calcular', label: 'Preço', icon: Calculator },
 ];
 
 export const BottomNav: React.FC = () => {
@@ -19,13 +19,14 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#17151F]/90 backdrop-blur-xl border-t border-white/10">
+    <div className="fixed bottom-0 left-0 right-0 bg-[var(--bg-surface)]/90 backdrop-blur-xl border-t border-[var(--border-default)]">
       <div className="max-w-md mx-auto flex justify-around items-center py-2 relative">
         {tabs.map(t => {
           const active = location.pathname === t.to;
+          const Icon = t.icon;
           return (
-            <Link key={t.to} to={t.to} className={`flex flex-col items-center px-4 py-2 ${active ? 'text-white' : 'text-white/60'}`}>
-              <span className="text-xl">{t.icon}</span>
+            <Link key={t.to} to={t.to} className={`flex flex-col items-center px-4 py-2 ${active ? 'text-[var(--accent-lime)]' : 'text-[var(--text-secondary)]'}`}>
+              <Icon className="text-xl" aria-hidden="true" />
               <span className="text-xs">{t.label}</span>
             </Link>
           );
@@ -45,5 +46,4 @@ export const BottomNav: React.FC = () => {
   );
 };
 
-
-
+export default BottomNav;
